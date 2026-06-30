@@ -1,0 +1,10 @@
+{
+  "name": "caminho-mais-barato-capitais",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "TD 02 - Caminho mais barato entre capitais brasileiras (Grafo + Dijkstra com Heap)",
+  "scripts": {
+    "start": "npx --yes serve . -l 8000"
+  },
+  "license": "MIT"
+}
