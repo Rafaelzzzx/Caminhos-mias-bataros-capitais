@@ -15,26 +15,85 @@ const carHTML = () => `
   <img class="sprite" src="assets/car.png" alt="carro" draggable="false">
   <div class="smoke"><span></span><span></span><span></span></div>`;
 
-// ---- Tela inicial: carro cruza com fumaça e revela o menu ----
+// ---- Fumaça em sprites (25 quadros) que mascara a transição ----
+const SMOKE_FRAMES = Array.from(
+  { length: 25 },
+  (_, i) => `assets/smoke/${String(i + 1).padStart(2, '0')}.png`
+);
+function preloadSmoke() {
+  SMOKE_FRAMES.forEach((src) => { const im = new Image(); im.src = src; });
+}
+
+function playSmoke() {
+  const fx = $('smokeFx');
+  fx.innerHTML = '';
+  const last = SMOKE_FRAMES.length - 1;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const cols = [4, 27, 50, 73, 96];
+  const rows = [16, 50, 84];
+
+  // cada puff tem vida própria: início, duração e aparência variados
+  const puffs = [];
+  for (const top of rows) {
+    for (const left of cols) {
+      const img = document.createElement('img');
+      img.className = 'puff';
+      const size = rnd(48, 70);                       // vmax
+      img.style.width = img.style.height = size + 'vmax';
+      img.style.left = (left + rnd(-5, 5)) + '%';
+      img.style.top = (top + rnd(-5, 5)) + '%';
+      img.style.transform =
+        `translate(-50%,-50%) scaleX(${Math.random() < 0.5 ? -1 : 1}) rotate(${(rnd(-16, 16)) | 0}deg)`;
+      img.style.opacity = '0';
+      fx.appendChild(img);
+      // jitter de início baixo => cobertura total rápida e uniforme;
+      // duração longa => sustenta a máscara por toda a transição do menu
+      puffs.push({ img, start: rnd(0, 280), dur: rnd(2100, 2700), lastF: -1 });
+    }
+  }
+  fx.classList.add('active');
+
+  const t0 = performance.now();
+  function frame(now) {
+    const t = now - t0;
+    let alive = false;
+    for (const p of puffs) {
+      const k = (t - p.start) / p.dur;               // progresso 0..1 do puff
+      if (k < 0) { alive = true; continue; }          // ainda não começou
+      if (k > 1) { if (p.img.style.opacity !== '0') p.img.style.opacity = '0'; continue; }
+      alive = true;
+      const f = Math.min(last, (k * (last + 1)) | 0);
+      if (f !== p.lastF) { p.img.src = SMOKE_FRAMES[f]; p.lastF = f; }
+      // envelope: fade-in rápido (0–.10), sustentação longa, fade-out (.85–1)
+      p.img.style.opacity = String(
+        k < 0.10 ? k / 0.10 : k > 0.85 ? Math.max(0, (1 - k) / 0.15) : 1
+      );
+    }
+    if (alive && t < 4200) requestAnimationFrame(frame);
+    else { fx.classList.remove('active'); fx.innerHTML = ''; }
+  }
+  requestAnimationFrame(frame);
+}
+
+// ---- Tela inicial: carro cruza, fumaça cobre e revela o menu ----
 function iniciarJogo() {
   const start = $('startScreen');
   const car = $('startCar');
   if (start.classList.contains('launching')) return;
-  const smoke = $('smokeScreen');
   car.classList.add('rolling');
   start.classList.add('launching');
 
-  // 1) fumaça começa a subir cobrindo a tela
-  setTimeout(() => smoke.classList.add('active'), 650);
-  // 2) no auge da fumaça, troca tela inicial pelo menu (escondido pela fumaça)
+  // 1) a fumaça sobe cobrindo a tela (cobertura total ~t=1090)
+  setTimeout(playSmoke, 600);
+  // 2) só depois da cobertura total o menu entra com fade (.8s -> opaco ~t=2000)
+  //    e a tela inicial sai; a fumaça só começa a dissipar (~t=2385) DEPOIS
+  //    do menu já estar opaco, então a transição passa despercebida.
   setTimeout(() => {
-    start.classList.add('fade');
     $('app').classList.remove('app-hidden');
     $('app').classList.add('app-reveal');
-  }, 1150);
-  setTimeout(() => start.remove(), 1500);
-  // 3) fumaça se dissipa revelando o menu, depois é removida
-  setTimeout(() => smoke.classList.remove('active'), 2400);
+    start.classList.add('fade');
+  }, 1200);
+  setTimeout(() => start.remove(), 3400);
 }
 
 // SHOW: exibe vértices e seus adjacentes.
@@ -84,6 +143,7 @@ function buscar() {
 function montarCenario() {
   // injeta o sprite do carro da tela inicial
   $('startCar').innerHTML = carHTML();
+  preloadSmoke();
 
   // START: clique, Enter ou Espaço
   $('startBtn').addEventListener('click', iniciarJogo);
