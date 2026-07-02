@@ -12,7 +12,7 @@ algoritmo de Dijkstra encontra o trajeto que minimiza o gasto total em R$.
 - Busca da rota mais barata entre quaisquer duas capitais.
 - Custo parametrizável: **preço do combustível** e **autonomia** do veículo.
 - Detalhamento do gasto: km percorridos, litros, combustível e pedágios.
-- Interface pixel-art com animação de carro e fumaça.
+- Interface pixel-art com animação de carro e transição estilo TV de tubo (CRT).
 
 ## 🗺️ Modelo de custo
 
